@@ -1,6 +1,5 @@
 
-extern crate hyper;
-extern crate hyper_native_tls;
+extern crate reqwest;
 extern crate serde_json;
 extern crate url;
 
@@ -9,19 +8,16 @@ use UserInfo;
 use GroupInfo;
 
 use error::{GraphInfoResult, GraphInfoRetrievalError};
-use self::hyper::header::{Authorization, Bearer, Headers};
-use self::hyper::net::HttpsConnector;
-use self::hyper_native_tls::NativeTlsClient;
+use self::reqwest::header::{Authorization, Bearer, Headers};
 use self::serde_json::Value;
 use self::url::form_urlencoded;
 use std::io::Read;
 
 type Query<'a> = Vec<(&'a str, &'a str)>;
 
-fn get_ssl_client() -> hyper::Client {
-    let ssl = NativeTlsClient::new().unwrap();
-    let connector = HttpsConnector::new(ssl);
-    hyper::Client::with_connector(connector)
+fn get_ssl_client() -> reqwest::Client {
+    let client = reqwest::Client::new();
+    client.ok().unwrap()
 }
 
 /// Issue an HTTPS POST request, and return the response body text
@@ -33,9 +29,10 @@ fn post_query(url: &str, query: &Query) -> GraphInfoResult<String> {
     let mut response = client.post(url).body(&body[..]).send()?;
     let mut buf = String::new();
     response.read_to_string(&mut buf)?;
-    if response.status != hyper::status::StatusCode::Ok {
+    let status = *response.status();
+    if status != reqwest::StatusCode::Ok {
         return Err(GraphInfoRetrievalError::BadHTTPResponse {
-                       status: response.status,
+                       status: status,
                        data: buf,
                    });
     }
@@ -53,9 +50,10 @@ fn get_content(content_url: &str, headers: Option<Headers>) -> GraphInfoResult<S
     let mut response = request.send()?;
     let mut buf = String::new();
     response.read_to_string(&mut buf)?;
-    if response.status != hyper::status::StatusCode::Ok {
+    let status = *response.status();
+    if status != reqwest::StatusCode::Ok {
         return Err(GraphInfoRetrievalError::BadHTTPResponse {
-                       status: response.status,
+                       status: status,
                        data: buf,
                    });
     }

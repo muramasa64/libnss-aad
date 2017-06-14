@@ -1,5 +1,5 @@
 
-extern crate hyper;
+extern crate reqwest;
 extern crate serde_json;
 extern crate url;
 
@@ -26,11 +26,12 @@ pub type GraphInfoResult<T> = Result<T, GraphInfoRetrievalError>;
 pub enum GraphInfoRetrievalError {
     NoAccessToken { response: String },
     BadHTTPResponse {
-        status: hyper::status::StatusCode,
+        status: reqwest::StatusCode,
         data: String,
     },
     BadJSONResponse,
-    HTTPError(hyper::error::Error),
+    HTTPError(reqwest::Error),
+    IOError,
     UnusableImmutableID,
     TooManyResults,
     NotFound,
@@ -42,15 +43,15 @@ impl From<serde_json::Error> for GraphInfoRetrievalError {
     }
 }
 
-impl From<hyper::error::Error> for GraphInfoRetrievalError {
-    fn from(err: hyper::error::Error) -> GraphInfoRetrievalError {
+impl From<reqwest::Error> for GraphInfoRetrievalError {
+    fn from(err: reqwest::Error) -> GraphInfoRetrievalError {
         GraphInfoRetrievalError::HTTPError(err)
     }
 }
 
 impl From<std::io::Error> for GraphInfoRetrievalError {
-    fn from(err: std::io::Error) -> GraphInfoRetrievalError {
-        GraphInfoRetrievalError::HTTPError(hyper::error::Error::Io(err)) // heh.
+    fn from(_: std::io::Error) -> GraphInfoRetrievalError {
+        GraphInfoRetrievalError::IOError
     }
 }
 
