@@ -9,7 +9,7 @@ extern crate libc;
 #[macro_use]
 extern crate serde_derive;
 
-extern crate hyper;
+extern crate reqwest;
 extern crate serde_yaml;
 
 mod azure;
@@ -17,7 +17,7 @@ mod error;
 
 use core::ptr::null_mut;
 use error::{GraphInfoRetrievalError, BufferFillError, BufferFillResult};
-use hyper::status::StatusCode;
+use reqwest::StatusCode;
 use libc::{c_void, c_char, uid_t, gid_t, size_t, passwd, group};
 use libc::{ENOENT, EAGAIN, ERANGE};
 use std::ffi::{CStr, CString};
