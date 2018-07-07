@@ -15,22 +15,17 @@ use std::io::Read;
 
 type Query<'a> = Vec<(&'a str, &'a str)>;
 
-fn get_ssl_client() -> reqwest::Client {
-    let client = reqwest::Client::new();
-    client.ok().unwrap()
-}
-
 /// Issue an HTTPS POST request, and return the response body text
 fn post_query(url: &str, query: &Query) -> GraphInfoResult<String> {
-    let client = get_ssl_client();
+    let client = reqwest::Client::new();
     let body = form_urlencoded::Serializer::new(String::new())
         .extend_pairs(query.iter())
         .finish();
-    let mut response = client.post(url).body(&body[..]).send()?;
+    let mut response = client.post(url).body(body).send()?;
     let mut buf = String::new();
     response.read_to_string(&mut buf)?;
-    let status = *response.status();
-    if status != reqwest::StatusCode::Ok {
+    let status = response.status();
+    if !(status.is_success()) {
         return Err(GraphInfoRetrievalError::BadHTTPResponse {
                        status: status,
                        data: buf,
@@ -40,18 +35,14 @@ fn post_query(url: &str, query: &Query) -> GraphInfoResult<String> {
 }
 
 /// Issue an HTTPS GET request, and return the response body text.
-fn get_content(content_url: &str, headers: Option<Headers>) -> GraphInfoResult<String> {
-    let client = get_ssl_client();
-    let request = if let Some(h) = headers {
-        client.get(content_url).headers(h)
-    } else {
-        client.get(content_url)
-    };
-    let mut response = request.send()?;
+fn get_content(content_url: &str, headers: Headers) -> GraphInfoResult<String> {
+    let client = reqwest::Client::new();
+
+    let mut response = client.get(content_url).headers(headers).send()?;
     let mut buf = String::new();
     response.read_to_string(&mut buf)?;
-    let status = *response.status();
-    if status != reqwest::StatusCode::Ok {
+    let status = response.status();
+    if !(status.is_success()) {
         return Err(GraphInfoRetrievalError::BadHTTPResponse {
                        status: status,
                        data: buf,
@@ -276,7 +267,7 @@ pub fn get_user_groups(config: &AadConfig, username: &str) -> GraphInfoResult<Ve
             Err(e) => {
                 match e {
                     GraphInfoRetrievalError::BadHTTPResponse { status, data } => {
-                        if status == hyper::status::StatusCode::NotFound {
+                        if status == reqwest::StatusCode::NotFound {
                             return Ok(vec![]);
                         }
                         if data.contains("Directory_ExpiredPageToken") && retries > 0 {
@@ -327,5 +318,5 @@ fn get_graph_info(config: &AadConfig, query_url: &str) -> GraphInfoResult<String
     let mut auth_header = Headers::new();
     auth_header.set(Authorization(Bearer { token: token }));
 
-    get_content(query_url, Some(auth_header))
+    get_content(query_url, auth_header)
 }
